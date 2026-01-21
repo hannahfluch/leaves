@@ -27,8 +27,11 @@
         toolchain =
           with fenix.packages.${system};
           combine [
-            minimal.rustc
-            minimal.cargo
+            complete.rustc
+            complete.cargo
+            complete.rust-src
+            complete.rust-analyzer
+            complete.clippy
           ];
 
         naersk' = pkgs.callPackage naersk {
@@ -49,6 +52,59 @@
             toolchain
           ];
         };
+
+        nixosModules.default =
+          {
+            lib,
+            pkgs,
+            config,
+            ...
+          }:
+          let
+            cfg = config.environment.persistence;
+            inherit (lib)
+              flatten
+              catAttrs
+              attrValues
+              filter
+              mapAttrsToList
+              zipAttrsWith
+              ;
+
+            allPersistentStoragePaths =
+              let
+                # All enabled system paths
+                nixos = filter (v: v.enable) (attrValues cfg);
+
+                # Get the files and directories from the `users` submodules of
+                # enabled system paths
+                nixosUsers = flatten (map attrValues (catAttrs "users" nixos));
+
+                # Fetch enabled paths from all Home Manager users who have the
+                # persistence module loaded
+                homeManager =
+                  let
+                    paths = flatten (
+                      mapAttrsToList (_name: value: attrValues (value.home.persistence or { }))
+                        config.home-manager.users or { }
+                    );
+                  in
+                  filter (v: v.enable) paths;
+              in
+              zipAttrsWith (_: flatten) (nixos ++ nixosUsers ++ homeManager);
+
+            group =
+              entries: attr:
+              lib.mapAttrs (_: xs: map (x: x.${attr}) xs) (lib.groupBy (x: x.persistentStoragePath) entries);
+
+            out_conf = {
+              directories = group allPersistentStoragePaths.directories "dirPath";
+              files = group allPersistentStoragePaths.files "filePath";
+            };
+          in
+          {
+            environment.etc."leaves.json".text = builtins.toJSON out_conf;
+          };
       }
     );
 }

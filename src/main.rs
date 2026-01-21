@@ -7,6 +7,7 @@ use crate::cli::Commands;
 mod cli;
 mod commands;
 mod config;
+mod persistent;
 mod roots;
 
 fn main() {
@@ -19,5 +20,7 @@ fn main() {
         }
 
         Commands::Query { path, search } => commands::query::query(config, &args, *path, search),
+
+        Commands::Check => commands::check::check(config, &args),
     }
 }
