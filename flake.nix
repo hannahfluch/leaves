@@ -1,7 +1,11 @@
 {
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
-    naersk.url = "github:nix-community/naersk";
+    naersk = {
+      url = "github:nix-community/naersk";
+      inputs.fenix.follows = "fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     fenix = {
       url = "github:nix-community/fenix/monthly";
@@ -12,11 +16,11 @@
 
   outputs =
     {
-      self,
       flake-utils,
       fenix,
       naersk,
       nixpkgs,
+      ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -24,15 +28,20 @@
         pkgs = (import nixpkgs) {
           inherit system;
         };
-        toolchain =
-          with fenix.packages.${system};
-          combine [
-            complete.rustc
-            complete.cargo
-            complete.rust-src
-            complete.rust-analyzer
-            complete.clippy
-          ];
+        withComponents = fenix.packages.${system}.complete.withComponents;
+        baseComponents = [
+          "rustc"
+          "cargo"
+          "clippy"
+        ];
+        toolchain = withComponents baseComponents;
+        devToolchain = withComponents (
+          baseComponents
+          ++ [
+            "rust-src"
+            "rust-analyzer"
+          ]
+        );
 
         naersk' = pkgs.callPackage naersk {
           cargo = toolchain;
@@ -49,14 +58,13 @@
         # For `nix develop` (optional, can be skipped):
         shells.default = pkgs.mkShell {
           nativeBuildInputs = [
-            toolchain
+            devToolchain
           ];
         };
 
         nixosModules.default =
           {
             lib,
-            pkgs,
             config,
             ...
           }:
