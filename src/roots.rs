@@ -13,7 +13,7 @@ pub fn get_all(config: &Config, args: &Args) -> Vec<PathBuf> {
         Duration::MAX
     };
 
-    std::fs::read_dir(&config.path)
+    std::fs::read_dir(&config.old_roots_path)
         .unwrap()
         .filter_map(|x| x.ok())
         .filter(|x| {

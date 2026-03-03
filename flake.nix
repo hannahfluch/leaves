@@ -52,6 +52,7 @@
       rec {
         # For `nix build` & `nix run`:
         packages.default = naersk'.buildPackage {
+          buildInputs = [ pkgs.ripgrep ];
           src = ./.;
         };
 
