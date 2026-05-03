@@ -53,7 +53,7 @@ pub fn check(config: Config, _args: &Args) {
     for p in left_over {
         let same = extra
             .iter()
-            .position(|x| x.as_str() == p || p.trim_start_matches(x.as_str()) == "/");
+            .position(|x| x == &p || x.trim_start_matches(&p) == "/");
 
         if let Some(pos) = same {
             extra.swap_remove(pos);
