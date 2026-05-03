@@ -8,46 +8,6 @@ use crate::{
     persistent::{PersistStatus, PersistentLocations},
 };
 
-enum RGCheck {
-    DidntFind,
-    OnlySuffix,
-    EntirePath,
-}
-
-fn ripgrep(config: &Config, prefix: &str, suffix: &str) -> RGCheck {
-    let path = prefix.to_string() + suffix;
-    let config_path = config.config_path.as_os_str().to_string_lossy();
-
-    let status = Command::new("rg")
-        .args(["-F", &path, &config_path])
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
-
-    if status.success() {
-        return RGCheck::EntirePath;
-    }
-
-    let suffix = PathBuf::from(suffix)
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .into_owned();
-    let status = Command::new("rg")
-        .args(["-F", &suffix, &config_path])
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
-
-    if status.success() {
-        RGCheck::OnlySuffix
-    } else {
-        RGCheck::DidntFind
-    }
-}
-
 pub fn check(config: Config, _args: &Args) {
     let persistent_locs = PersistentLocations::new().expect("to read /etc/leaves.json");
 
@@ -79,7 +39,7 @@ pub fn check(config: Config, _args: &Args) {
                 PersistStatus::ParentOfDir => true,
                 PersistStatus::ChildOrExplicit => false, // Dont explore persisted directories further
                 PersistStatus::NotPersisted => {
-                    left_over.push((store_path.to_owned(), location_in_store.to_owned()));
+                    left_over.push(f_location.into_owned());
                     found_any = true;
                     false
                 }
@@ -87,27 +47,31 @@ pub fn check(config: Config, _args: &Args) {
         }) {}
     }
 
-    let mut didnt_find = vec![];
-    let mut just_suffix = vec![];
-    let mut full_match = vec![];
+    let mut extra = persistent_locs.extra;
+    let extra_initial = extra.len();
+    let mut not_in_extra = vec![];
+    for p in left_over {
+        let same = extra
+            .iter()
+            .position(|x| x.as_str() == p || p.trim_start_matches(x.as_str()) == "/");
 
-    for (prefix, suffix) in left_over {
-        match ripgrep(&config, &prefix, &suffix) {
-            RGCheck::DidntFind => didnt_find.push((prefix, suffix)),
-            RGCheck::OnlySuffix => just_suffix.push((prefix, suffix)),
-            RGCheck::EntirePath => full_match.push((prefix, suffix)),
+        if let Some(pos) = same {
+            extra.swap_remove(pos);
+        } else {
+            not_in_extra.push(p);
         }
     }
 
-    println!("{} full paths found with ripgrep!", full_match.len());
-    println!("{} path names found with ripgrep!", just_suffix.len());
-
-    for (p, s) in just_suffix {
-        println!("Could be used in config: {p}{s}");
+    if extra_initial != 0 {
+        println!("Extra paths used: {}!", extra_initial - extra.len());
     }
 
-    for (p, s) in didnt_find {
-        println!("Leftover path: {p}{s}");
+    for p in not_in_extra {
+        println!("Leftover path: {p}");
+    }
+
+    for e in extra {
+        println!("Unused extra config: {e}");
     }
 
     if !found_any {

@@ -1,8 +1,11 @@
 use crate::{cli::Args, config::Config, persistent::PersistentLocations};
 
 pub fn paths(_config: Config, _args: &Args) {
-    let PersistentLocations { directories, files } =
-        PersistentLocations::new().expect("to read /etc/leaves.json");
+    let PersistentLocations {
+        directories,
+        files,
+        mut extra,
+    } = PersistentLocations::new().expect("to read /etc/leaves.json");
 
     let stats = {
         let x: usize = files.values().map(|x| x.len()).sum();
@@ -30,6 +33,14 @@ pub fn paths(_config: Config, _args: &Args) {
         v.sort_unstable();
         for x in v {
             println!("\t{x}");
+        }
+    }
+
+    if !extra.is_empty() {
+        println!("\n\nExtra paths:");
+        extra.sort_unstable();
+        for p in extra {
+            println!("\t{p}");
         }
     }
 }

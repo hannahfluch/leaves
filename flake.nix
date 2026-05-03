@@ -52,7 +52,6 @@
       rec {
         # For `nix build` & `nix run`:
         packages.default = naersk'.buildPackage {
-          buildInputs = [ pkgs.ripgrep ];
           src = ./.;
         };
 
@@ -102,6 +101,14 @@
               in
               zipAttrsWith (_: flatten) (nixos ++ nixosUsers ++ homeManager);
 
+            allExtraPaths =
+              let
+                one = cfg: if cfg ? atlas then cfg.atlas.extraPaths else [ ];
+                nixos = one config;
+                homeManager = flatten (mapAttrsToList (_: one) config.home-manager.users or { });
+              in
+              nixos ++ homeManager;
+
             group =
               entries: attr:
               lib.mapAttrs (_: xs: map (x: x.${attr}) xs) (lib.groupBy (x: x.persistentStoragePath) entries);
@@ -109,6 +116,7 @@
             out_conf = {
               directories = group allPersistentStoragePaths.directories "dirPath";
               files = group allPersistentStoragePaths.files "filePath";
+              extra = allExtraPaths;
             };
           in
           {
