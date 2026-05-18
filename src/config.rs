@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub old_roots_path: PathBuf,
     pub config_path: PathBuf,
+    pub exclude_current: Option<String>,
 }
 
 /// `MyConfig` implements `Default`
@@ -14,6 +15,7 @@ impl ::std::default::Default for Config {
         Self {
             old_roots_path: PathBuf::from("/persistent/old_roots"),
             config_path: PathBuf::from(shellexpand::tilde("~/nixcfg").into_owned()),
+            exclude_current: None,
         }
     }
 }
