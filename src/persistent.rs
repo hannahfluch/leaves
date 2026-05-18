@@ -6,6 +6,7 @@ use std::io::BufReader;
 pub struct PersistentLocations {
     pub directories: HashMap<String, Vec<String>>,
     pub files: HashMap<String, Vec<String>>,
+    #[serde(default)]
     pub extra: Vec<String>,
 }
 

@@ -62,6 +62,51 @@
           ];
         };
 
+        homeManagerModules.default =
+          {
+            lib,
+            config,
+            ...
+
+          }:
+          let
+            cfg = config.programs.leaves;
+            toml = pkgs.formats.toml { };
+          in
+          {
+
+            options.programs.leaves = {
+              enable = lib.mkEnableOption "leaves";
+              package = lib.mkOption {
+                type = lib.types.package;
+                default = packages.default;
+                description = "The leaves package to use.";
+              };
+
+              settings = {
+                old_roots_path = lib.mkOption {
+                  default = "/persistent/old_roots";
+                  example = "/persistent/roots";
+                  description = "Path to old_roots volume.";
+                  type = lib.types.str;
+                };
+                exclude_current = lib.mkOption {
+                  default = null;
+                  example = "current";
+                  description = "Name of link to current root.";
+                  type = lib.types.nullOr lib.types.str;
+                };
+              };
+            };
+
+            config = lib.mkIf cfg.enable {
+              home.packages = [ cfg.package ];
+              xdg.configFile."leaves/leaves.toml".source = toml.generate "leaves.toml" (
+                lib.filterAttrs (_: v: v != null) cfg.settings
+              );
+            };
+          };
+
         nixosModules.default =
           {
             lib,
@@ -121,7 +166,7 @@
           in
           {
             environment.etc."leaves.json".text = builtins.toJSON out_conf;
-            environment.systemPackages = [ packages.default ];
+            home-manager.sharedModules = [ homeManagerModules.default ];
           };
       }
     );

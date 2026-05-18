@@ -12,7 +12,7 @@ mod roots;
 
 fn main() {
     let args = cli::Args::parse();
-    let config: config::Config = confy::load("leaves", None).unwrap();
+    let config: config::Config = confy::load("leaves", Some("leaves")).unwrap();
 
     match &args.command {
         Commands::Restore { automatic, path } => {
