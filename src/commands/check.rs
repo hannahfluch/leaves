@@ -1,14 +1,8 @@
-use std::{path::PathBuf, process::Command};
-
 use walkdir::WalkDir;
 
-use crate::{
-    cli::Args,
-    config::Config,
-    persistent::{PersistStatus, PersistentLocations},
-};
+use crate::persistent::{PersistStatus, PersistentLocations};
 
-pub fn check(config: Config, _args: &Args) {
+pub fn check() {
     let persistent_locs = PersistentLocations::new().expect("to read /etc/leaves.json");
 
     let stats = {
